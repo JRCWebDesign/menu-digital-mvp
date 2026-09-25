@@ -5,8 +5,10 @@ const state = {
   cart: [],
   activeCategory: "all",
   productBeingConfigured: null,
+  productOptions: [],
   selectedOptions: [],
-  orderType: null
+  orderType: null,
+  paymentMethod: null
 };
 
 const $ = (selector) => document.querySelector(selector);
@@ -25,8 +27,11 @@ function init() {
 
   renderHeader();
   renderStatus();
+  renderFeaturedProduct();
   renderCategories();
   renderMenu();
+  renderGoogleReviews();
+  renderSocialLinks();
   renderCartBar();
   bindGlobalEvents();
 }
@@ -96,6 +101,11 @@ function getOpenState() {
   };
 }
 
+function canPlaceOrders() {
+  return getOpenState().open
+    || (state.restaurant.whatsappTesting?.enabled && Boolean(getOrderWhatsAppNumber()));
+}
+
 function findNextOpening(fromDate) {
   for (let offset = 0; offset <= 7; offset++) {
     const date = new Date(fromDate);
@@ -120,10 +130,13 @@ function findNextOpening(fromDate) {
 
 function renderHeader() {
   document.title = `${state.restaurant.name} · Menú digital`;
+  const brandMark = state.restaurant.logo
+    ? `<img class="brand-logo" src="${state.restaurant.logo}" alt="Logo de ${state.restaurant.name}">`
+    : `<div class="brand-mark" aria-hidden="true">${state.restaurant.name.charAt(0)}</div>`;
 
   $("#restaurant-header").innerHTML = `
     <div class="header-inner">
-      <div class="brand-mark" aria-hidden="true">${state.restaurant.name.charAt(0)}</div>
+      ${brandMark}
       <div class="brand-copy">
         <span class="brand-eyebrow">MENÚ DEL LOCAL</span>
         <h1>${state.restaurant.name}</h1>
@@ -135,17 +148,68 @@ function renderHeader() {
 
 function renderStatus() {
   const status = getOpenState();
+  const message = status.open
+    ? "Armá tu pedido y lo enviás por WhatsApp."
+    : status.label;
 
   $("#restaurant-status").innerHTML = `
     <div class="status ${status.open ? "is-open" : "is-closed"}">
       <span class="status-dot" aria-hidden="true"></span>
       <div>
         <strong>${status.open ? "Estamos tomando pedidos" : "Ahora estamos cerrados"}</strong>
-        <p>${status.open ? "Armá tu pedido y lo enviás por WhatsApp." : status.label}</p>
+        <p>${message}</p>
       </div>
       <span class="status-note">${status.open ? "ABIERTO" : "CERRADO"}</span>
     </div>
   `;
+}
+
+function renderFeaturedProduct() {
+  const section = $("#featured-product");
+  const feature = state.restaurant.featuredProduct;
+  const product = state.restaurant.products.find(
+    item => item.id === feature?.productId
+  );
+
+  if (!feature || !product) {
+    section.classList.add("hidden");
+    section.innerHTML = "";
+    return;
+  }
+
+  const visuals = {
+    fries: "🍟",
+    drinks: "🥤",
+    combos: "🍔",
+    burgers: "🍔"
+  };
+  const visual = product.image
+    ? `<img src="${product.image}" alt="" loading="lazy">`
+    : `<span aria-hidden="true">${visuals[product.categoryId] || "🍽️"}</span>`;
+  const open = getOpenState().open;
+  const canOrder = canPlaceOrders();
+
+  section.classList.remove("hidden");
+  section.innerHTML = `
+    <article class="featured-banner">
+      <div class="featured-copy">
+        <span class="featured-eyebrow">${feature.eyebrow || "RECOMENDADO POR LA CASA"}</span>
+        <h2>${product.name}</h2>
+        <p>${feature.message || product.description}</p>
+        <div class="featured-actions">
+          <strong class="featured-price">${money(product.price)}</strong>
+          <button class="featured-button" data-featured-product ${canOrder ? "" : "disabled"}>
+            ${canOrder ? "Lo quiero" : "Pedidos cerrados"}
+          </button>
+        </div>
+      </div>
+      <div class="featured-visual">${visual}</div>
+    </article>
+  `;
+
+  section.querySelector("[data-featured-product]").addEventListener("click", () => {
+    if (canPlaceOrders()) openProduct(product);
+  });
 }
 
 function renderCategories() {
@@ -185,6 +249,17 @@ function getVisibleProducts() {
   );
 }
 
+function burgerComboIncludesText() {
+  const included = state.restaurant.burgerAndComboIncludes || [];
+  return included.length
+    ? `Incluye ${included.join(" y ").toLowerCase()}.`
+    : "";
+}
+
+function hasIncludedFries(product) {
+  return product.categoryId === "burgers" || product.categoryId === "combos";
+}
+
 function renderMenu() {
   const products = getVisibleProducts();
 
@@ -207,11 +282,81 @@ function renderMenu() {
         item => item.id === button.dataset.productId
       );
 
-      if (!getOpenState().open) return;
+      if (!canPlaceOrders()) return;
 
       openProduct(product);
     });
   });
+}
+
+function safeExternalUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : "";
+  } catch {
+    return "";
+  }
+}
+
+function getWhatsAppUrl() {
+  const configuredUrl = safeExternalUrl(state.restaurant.whatsappUrl);
+  if (configuredUrl) return configuredUrl;
+
+  const phone = String(state.restaurant.whatsapp || "").replace(/\D/g, "");
+  return phone.length >= 8 && phone.length <= 15 ? `https://wa.me/${phone}` : "";
+}
+
+function getOrderWhatsAppNumber() {
+  const testing = state.restaurant.whatsappTesting;
+  const number = testing?.enabled ? testing.number : state.restaurant.whatsapp;
+  const normalized = String(number || "").replace(/\D/g, "");
+
+  return normalized.length >= 8 && normalized.length <= 15 ? normalized : "";
+}
+
+function renderGoogleReviews() {
+  const section = $("#google-reviews");
+  const reviewUrl = safeExternalUrl(state.restaurant.googleReviewUrl)
+    || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(state.restaurant.name)}`;
+
+  section.innerHTML = `
+    <div class="review-invite">
+      <div class="review-copy">
+        <span class="review-eyebrow">GOOGLE</span>
+        <h2>¿Cómo estuvo tu experiencia?</h2>
+        <p>Tu reseña ayuda a que más personas descubran ${state.restaurant.name}.</p>
+      </div>
+      <a class="review-link" href="${reviewUrl}" target="_blank" rel="noopener noreferrer">
+        Dejar una reseña <span aria-hidden="true">↗</span>
+      </a>
+    </div>
+  `;
+}
+
+function renderSocialLinks() {
+  const section = $("#social-links");
+  const links = [
+    { label: "Instagram", href: safeExternalUrl(state.restaurant.instagramUrl) },
+    { label: "WhatsApp", href: getWhatsAppUrl() }
+  ].filter(link => link.href);
+
+  if (!links.length) {
+    section.classList.add("hidden");
+    section.innerHTML = "";
+    return;
+  }
+
+  section.classList.remove("hidden");
+  section.innerHTML = `
+    <span class="social-heading">Seguinos y contactanos</span>
+    <nav class="social-links-list" aria-label="Redes sociales">
+      ${links.map(link => `
+        <a class="social-link" href="${link.href}" target="_blank" rel="noopener noreferrer">
+          ${link.label} <span aria-hidden="true">↗</span>
+        </a>
+      `).join("")}
+    </nav>
+  `;
 }
 
 function productCard(product) {
@@ -227,6 +372,9 @@ function productCard(product) {
   const visual = product.image
     ? `<img src="${product.image}" alt="" loading="lazy">`
     : `<span aria-hidden="true">${visuals[product.categoryId] || "🍽️"}</span>`;
+  const burgerComboDetails = hasIncludedFries(product) && burgerComboIncludesText()
+    ? `<div class="product-includes">${burgerComboIncludesText()}</div>`
+    : "";
 
   return `
     <article class="product-card">
@@ -235,24 +383,35 @@ function productCard(product) {
         ${tags}
         <h2>${product.name}</h2>
         <p>${product.description}</p>
+        ${burgerComboDetails}
         <strong class="product-price">${money(product.price)}</strong>
       </div>
 
       <button
         class="add-button"
         data-product-id="${product.id}"
-        ${!getOpenState().open ? "disabled" : ""}>
+        ${!canPlaceOrders() ? "disabled" : ""}>
         <span aria-hidden="true">+</span><span>Agregar</span>
       </button>
     </article>
   `;
 }
 
+function getProductOptions(product) {
+  const productOptions = product.options || [];
+  const includedFriesOptions = hasIncludedFries(product)
+    ? state.restaurant.burgerAndComboFriesOptions || []
+    : [];
+
+  return [...productOptions, ...includedFriesOptions];
+}
+
 function openProduct(product) {
   state.productBeingConfigured = product;
+  state.productOptions = getProductOptions(product);
   state.selectedOptions = [];
 
-  const hasOptions = product.options?.length;
+  const hasOptions = state.productOptions.length;
 
   $("#product-modal").innerHTML = `
     <div class="modal-backdrop" data-close-modal></div>
@@ -260,11 +419,14 @@ function openProduct(product) {
       <button class="modal-close" data-close-modal aria-label="Cerrar">×</button>
       <h2>${product.name}</h2>
       <p>${product.description}</p>
+      ${hasIncludedFries(product) && burgerComboIncludesText()
+        ? `<p class="product-includes">${burgerComboIncludesText()}</p>`
+        : ""}
       <strong>${money(product.price)}</strong>
 
       ${
         hasOptions
-          ? product.options.map(option => `
+          ? state.productOptions.map(option => `
               <fieldset>
                 <legend>${option.name}</legend>
                 ${option.choices.map(choice => `
@@ -308,7 +470,7 @@ function updateSelectedOptions() {
   state.selectedOptions = [
     ...$("#product-modal").querySelectorAll("input:checked")
   ].map(input => {
-    const option = state.productBeingConfigured.options.find(
+    const option = state.productOptions.find(
       item => item.id === input.dataset.optionId
     );
 
@@ -344,6 +506,7 @@ function closeProductModal() {
   $("#product-modal").classList.add("hidden");
   $("#product-modal").setAttribute("aria-hidden", "true");
   state.productBeingConfigured = null;
+  state.productOptions = [];
   state.selectedOptions = [];
 }
 
@@ -441,12 +604,30 @@ function renderCartDrawer() {
           : ""
       }
 
+      ${state.restaurant.paymentMethods?.length
+        ? `
+          <fieldset>
+            <legend>¿Cómo vas a pagar?</legend>
+            ${state.restaurant.paymentMethods.map(method => `
+              <label>
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="${method.id}"
+                  ${state.paymentMethod === method.id ? "checked" : ""}>
+                ${method.label}
+              </label>
+            `).join("")}
+          </fieldset>
+        `
+        : ""}
+
       <div id="order-extra-fields"></div>
 
       <button
         class="primary-button"
         id="send-whatsapp"
-        ${getOpenState().open ? "" : "disabled"}>
+        ${canPlaceOrders() ? "" : "disabled"}>
         Enviar pedido por WhatsApp
       </button>
     </aside>
@@ -475,6 +656,12 @@ function renderCartDrawer() {
     });
   });
 
+  $("#cart-drawer").querySelectorAll('input[name="paymentMethod"]').forEach(input => {
+    input.addEventListener("change", () => {
+      state.paymentMethod = input.value;
+    });
+  });
+
   $("#send-whatsapp").addEventListener("click", sendOrderToWhatsApp);
 }
 
@@ -488,6 +675,11 @@ function renderOrderExtraFields() {
       <label>
         Nombre
         <input id="customer-name" type="text" autocomplete="name" placeholder="Tu nombre">
+      </label>
+
+      <label>
+        Teléfono de contacto
+        <input id="customer-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="09X XXX XXX" required>
       </label>
 
       <label>
@@ -508,6 +700,11 @@ function renderOrderExtraFields() {
       <label>
         Nombre
         <input id="customer-name" type="text" autocomplete="name" placeholder="Tu nombre">
+      </label>
+
+      <label>
+        Teléfono de contacto
+        <input id="customer-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="09X XXX XXX" required>
       </label>
 
       <label>
@@ -559,7 +756,7 @@ function closeCart() {
 }
 
 function sendOrderToWhatsApp() {
-  if (!getOpenState().open || !state.cart.length) return;
+  if (!canPlaceOrders() || !state.cart.length) return;
 
   if (state.restaurant.orderSettings.delivery || state.restaurant.orderSettings.pickup) {
     if (!state.orderType) {
@@ -569,6 +766,7 @@ function sendOrderToWhatsApp() {
   }
 
   const name = $("#customer-name")?.value.trim() || "";
+  const phone = $("#customer-phone")?.value.trim() || "";
   const address = $("#customer-address")?.value.trim() || "";
   const notes = $("#customer-notes")?.value.trim() || "";
 
@@ -577,32 +775,63 @@ function sendOrderToWhatsApp() {
     return;
   }
 
+  const phoneDigits = phone.replace(/\D/g, "");
+  if (phoneDigits.length < 8 || phoneDigits.length > 15) {
+    alert("Ingresá un teléfono de contacto válido.");
+    return;
+  }
+
   if (state.orderType === "delivery" && !address) {
     alert("Ingresá la dirección.");
     return;
   }
 
-  const lines = [
-    `🍔 *NUEVO PEDIDO - ${state.restaurant.name.toUpperCase()}*`,
-    "",
-    ...state.cart.map(item => {
-      const options = item.options.length
-        ? `\n   Extras: ${item.options.map(option => option.name).join(", ")}`
-        : "";
+  const paymentMethod = state.restaurant.paymentMethods?.find(
+    method => method.id === state.paymentMethod
+  );
+  if (state.restaurant.paymentMethods?.length && !paymentMethod) {
+    alert("Elegí un medio de pago.");
+    return;
+  }
 
-      return `• ${item.quantity}x ${item.name} — ${money(item.unitPrice * item.quantity)}${options}`;
-    }),
+  const recipient = getOrderWhatsAppNumber();
+  if (!recipient) {
+    alert("El número de WhatsApp del local no es válido.");
+    return;
+  }
+
+  const productLines = state.cart.flatMap(item => {
+    const lines = [
+      `- ${item.quantity} x ${item.name} - ${money(item.unitPrice * item.quantity)}`
+    ];
+
+    if (item.options.length) {
+      lines.push(`  Extras: ${item.options.map(option => option.name).join(", ")}`);
+    }
+
+    return lines;
+  });
+
+  const lines = [
+    `*PEDIDO NUEVO - ${state.restaurant.name.toUpperCase()}*`,
+    "------------------------------",
     "",
-    `💰 *TOTAL: ${money(cartTotal())}*`,
+    "*PRODUCTOS*",
+    ...productLines,
     "",
-    `👤 Nombre: ${name}`,
-    state.orderType ? `📦 Modalidad: ${state.orderType === "delivery" ? "Delivery" : "Retiro"}` : "",
-    address ? `📍 Dirección: ${address}` : "",
-    notes ? `📝 Observaciones: ${notes}` : ""
+    `*TOTAL: ${money(cartTotal())}*`,
+    "",
+    "*DATOS DEL PEDIDO*",
+    `Nombre: ${name}`,
+    `Teléfono: ${phone}`,
+    paymentMethod ? `Medio de pago: ${paymentMethod.label}` : "",
+    state.orderType ? `Modalidad: ${state.orderType === "delivery" ? "Delivery" : "Retiro"}` : "",
+    address ? `Dirección: ${address}` : "",
+    notes ? `Observaciones: ${notes}` : ""
   ].filter(Boolean);
 
   const message = encodeURIComponent(lines.join("\n"));
-  const url = `https://wa.me/${state.restaurant.whatsapp}?text=${message}`;
+  const url = `https://wa.me/${recipient}?text=${message}`;
 
   window.open(url, "_blank", "noopener,noreferrer");
 }

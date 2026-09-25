@@ -5,14 +5,39 @@
  * Para la demo, cada local puede tener su propio archivo/configuración.
  */
 
+const potatoExtraOptions = [
+  {
+    id: "fries-topping",
+    name: "Extras para las papas",
+    required: false,
+    multiple: false,
+    choices: [
+      { id: "cheddar-bacon", name: "Cheddar y panceta", price: 30 }
+    ]
+  }
+];
+
 export const restaurants = {
   "lKb-smash": {
     id: "lKb-smash",
     name: "LKB Smash",
     tagline: "Simple. Real. Smash.",
+    logo: "./assets/img/logo.jpg",
     currency: "$",
-    whatsapp: "598XXXXXXXX",
+    whatsapp: "59894518022",
     locale: "es-UY",
+    instagramUrl: "https://www.instagram.com/lkb.smash_burgers/",
+    whatsappUrl: "https://wa.me/59894518022",
+    whatsappTesting: {
+      enabled: true,
+      number: "59892972434"
+    },
+    googleReviewUrl: "",
+    featuredProduct: {
+      productId: "signature",
+      eyebrow: "EL FAVORITO DE LA CASA",
+      message: "Nuestra smash más completa, con todo lo que nos representa."
+    },
 
     // Si false, nunca se permiten pedidos aunque esté dentro del horario.
     acceptingOrders: true,
@@ -23,6 +48,13 @@ export const restaurants = {
       notes: true,
       scheduledOrders: false
     },
+
+    paymentMethods: [
+      { id: "cash", label: "Efectivo" },
+      { id: "transfer", label: "Transferencia" }
+    ],
+    burgerAndComboIncludes: ["Pan de papa", "Papas fritas"],
+    burgerAndComboFriesOptions: potatoExtraOptions,
 
     // 0 = domingo, 1 = lunes ... 6 = sábado
     schedule: {
@@ -48,20 +80,9 @@ export const restaurants = {
         categoryId: "burgers",
         name: "LKB Signature",
         description: "Triple carne, huevo, doble cheddar, muzza, jamón, cebolla caramelizada, panceta crispy y salsa exclusiva.",
+        image: "./assets/img/lgbsignature.jpg",
         price: 450,
-        tags: ["popular", "signature"],
-        options: [
-          {
-            id: "extras",
-            name: "Extras",
-            required: false,
-            multiple: true,
-            choices: [
-              { id: "extra-cheddar", name: "Extra cheddar", price: 30 },
-              { id: "extra-bacon", name: "Extra panceta", price: 40 }
-            ]
-          }
-        ]
+        tags: ["popular", "signature"]
       },
       {
         id: "triple",
@@ -99,9 +120,10 @@ export const restaurants = {
         id: "fries-simple",
         categoryId: "fries",
         name: "Papas simples",
-        description: "Papas fritas.",
+        description: "Papas fritas clásicas. Sumales cheddar y panceta por $30.",
         price: 150,
-        tags: []
+        tags: [],
+        options: potatoExtraOptions
       },
       {
         id: "fries-cheddar-bacon",
@@ -110,14 +132,6 @@ export const restaurants = {
         description: "Papas fritas con cheddar y panceta.",
         price: 230,
         tags: ["popular"]
-      },
-      {
-        id: "fries-extra",
-        categoryId: "fries",
-        name: "Extra cheddar y panceta",
-        description: "Agregado para tus papas.",
-        price: 30,
-        tags: ["extra"]
       },
       {
         id: "drink",
