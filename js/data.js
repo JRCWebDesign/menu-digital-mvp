@@ -29,7 +29,7 @@ export const restaurants = {
     instagramUrl: "https://www.instagram.com/lkb.smash_burgers/",
     whatsappUrl: "https://wa.me/59894518022",
     whatsappTesting: {
-      enabled: true,
+      enabled: false,
       number: "59892972434"
     },
     googleReviewUrl: "",
@@ -89,6 +89,7 @@ export const restaurants = {
         categoryId: "burgers",
         name: "La Triple",
         description: "Triple carne, huevo, cheddar, panceta crispy y salsa BBQ.",
+        image: "./assets/img/latriple.png",
         price: 390,
         tags: ["popular"]
       },
@@ -97,6 +98,7 @@ export const restaurants = {
         categoryId: "burgers",
         name: "La Especial",
         description: "Doble carne, cheddar, muzza, jamón, panceta y cebolla caramelizada.",
+        image: "./assets/img/laespecial.png",
         price: 370,
         tags: []
       },
@@ -105,6 +107,7 @@ export const restaurants = {
         categoryId: "burgers",
         name: "La Sencillez",
         description: "Doble carne, cheddar, muzza, cebolla, lechuga y tomate.",
+        image: "./assets/img/lasencillez.png",
         price: 350,
         tags: []
       },
@@ -113,6 +116,7 @@ export const restaurants = {
         categoryId: "burgers",
         name: "Cangre Burger",
         description: "Una carne, cheddar, muzza y Coca-Cola 250 ml.",
+        image: "./assets/img/cangreburger.png",
         price: 270,
         tags: ["kids"]
       },
@@ -121,6 +125,7 @@ export const restaurants = {
         categoryId: "fries",
         name: "Papas simples",
         description: "Papas fritas clásicas. Sumales cheddar y panceta por $30.",
+        image: "./assets/img/papassimples.png",
         price: 150,
         tags: [],
         options: potatoExtraOptions
@@ -130,6 +135,7 @@ export const restaurants = {
         categoryId: "fries",
         name: "Papas con cheddar y panceta",
         description: "Papas fritas con cheddar y panceta.",
+        image: "./assets/img/papascheddarybacon.png",
         price: 230,
         tags: ["popular"]
       },
@@ -138,6 +144,7 @@ export const restaurants = {
         categoryId: "drinks",
         name: "Refresco 600 ml",
         description: "Coca-Cola, Fanta o Sprite.",
+        image: "./assets/img/bebidas.png",
         price: 90,
         tags: []
       },
@@ -146,6 +153,7 @@ export const restaurants = {
         categoryId: "combos",
         name: "Combo Familiar",
         description: "2 La Sencillez + 2 La Especial + 2 papas simples + 2 refrescos 600 ml.",
+        image: "./assets/img/combofamiliar.png",
         price: 1350,
         tags: ["popular", "combo"],
         fixedItems: [
