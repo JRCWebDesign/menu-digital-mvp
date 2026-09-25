@@ -21,7 +21,7 @@ export const restaurants = {
   "lKb-smash": {
     id: "lKb-smash",
     name: "LKB Smash",
-    tagline: "Simple. Real. Smash.",
+    tagline: "🍔 Sabor, calidad, identidad.\nUna nueva forma de disfrutar una burger\n📍 La Paz - Las Piedras\n⏰ Mié a Vie: 19:30 a 23:30hs | Sáb: 19:30 a 00hs",
     logo: "./assets/img/logo.jpg",
     currency: "$",
     whatsapp: "59894518022",
@@ -29,7 +29,7 @@ export const restaurants = {
     instagramUrl: "https://www.instagram.com/lkb.smash_burgers/",
     whatsappUrl: "https://wa.me/59894518022",
     whatsappTesting: {
-      enabled: false,
+      enabled: true,
       number: "59892972434"
     },
     googleReviewUrl: "",
@@ -58,13 +58,10 @@ export const restaurants = {
 
     // 0 = domingo, 1 = lunes ... 6 = sábado
     schedule: {
-      0: [{ open: "20:00", close: "00:00" }],
-      1: [{ open: "20:00", close: "00:00" }],
-      2: [{ open: "20:00", close: "00:00" }],
-      3: [{ open: "20:00", close: "00:00" }],
-      4: [{ open: "20:00", close: "00:00" }],
-      5: [{ open: "20:00", close: "01:00" }],
-      6: [{ open: "20:00", close: "01:00" }]
+      3: [{ open: "19:30", close: "23:30" }],
+      4: [{ open: "19:30", close: "23:30" }],
+      5: [{ open: "19:30", close: "23:30" }],
+      6: [{ open: "19:30", close: "00:00" }]
     },
 
     categories: [

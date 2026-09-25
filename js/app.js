@@ -623,6 +623,7 @@ function renderCartDrawer() {
         : ""}
 
       <div id="order-extra-fields"></div>
+          <p id="order-feedback" class="order-feedback hidden" role="alert" aria-live="assertive" aria-atomic="true"></p>
 
       <button
         class="primary-button"
@@ -652,6 +653,7 @@ function renderCartDrawer() {
   $("#cart-drawer").querySelectorAll('input[name="orderType"]').forEach(input => {
     input.addEventListener("change", () => {
       state.orderType = input.value;
+      clearOrderFeedback();
       renderOrderExtraFields();
     });
   });
@@ -659,6 +661,7 @@ function renderCartDrawer() {
   $("#cart-drawer").querySelectorAll('input[name="paymentMethod"]').forEach(input => {
     input.addEventListener("change", () => {
       state.paymentMethod = input.value;
+      clearOrderFeedback();
     });
   });
 
@@ -692,6 +695,7 @@ function renderOrderExtraFields() {
         <textarea id="customer-notes" placeholder="Ej: sin cebolla"></textarea>
       </label>
     `;
+    bindOrderFieldFeedback();
     return;
   }
 
@@ -712,12 +716,42 @@ function renderOrderExtraFields() {
         <textarea id="customer-notes" placeholder="Opcional"></textarea>
       </label>
     `;
+    bindOrderFieldFeedback();
     return;
   }
 
   container.innerHTML = `
     <p class="helper">Elegí cómo querés recibir el pedido para continuar.</p>
   `;
+}
+
+function bindOrderFieldFeedback() {
+  $("#order-extra-fields").querySelectorAll("input, textarea").forEach(field => {
+    field.addEventListener("input", clearOrderFeedback);
+  });
+}
+
+function showOrderFeedback(message, targetSelector) {
+  const feedback = $("#order-feedback");
+  if (!feedback) return;
+
+  feedback.textContent = message;
+  feedback.classList.remove("hidden");
+
+  const target = targetSelector ? $(targetSelector) : null;
+  target?.setAttribute("aria-invalid", "true");
+  target?.focus();
+}
+
+function clearOrderFeedback() {
+  const feedback = $("#order-feedback");
+  if (!feedback) return;
+
+  feedback.textContent = "";
+  feedback.classList.add("hidden");
+  $("#cart-drawer").querySelectorAll('[aria-invalid="true"]').forEach(field => {
+    field.removeAttribute("aria-invalid");
+  });
 }
 
 function changeQuantity(lineId, amount) {
@@ -757,10 +791,11 @@ function closeCart() {
 
 function sendOrderToWhatsApp() {
   if (!canPlaceOrders() || !state.cart.length) return;
+  clearOrderFeedback();
 
   if (state.restaurant.orderSettings.delivery || state.restaurant.orderSettings.pickup) {
     if (!state.orderType) {
-      alert("Elegí cómo querés recibir el pedido.");
+      showOrderFeedback("Elegí cómo querés recibir el pedido.", 'input[name="orderType"]');
       return;
     }
   }
@@ -771,18 +806,18 @@ function sendOrderToWhatsApp() {
   const notes = $("#customer-notes")?.value.trim() || "";
 
   if (!name) {
-    alert("Ingresá tu nombre.");
+    showOrderFeedback("Ingresá tu nombre para continuar.", "#customer-name");
     return;
   }
 
   const phoneDigits = phone.replace(/\D/g, "");
   if (phoneDigits.length < 8 || phoneDigits.length > 15) {
-    alert("Ingresá un teléfono de contacto válido.");
+    showOrderFeedback("Revisá el teléfono. Ingresá entre 8 y 15 dígitos.", "#customer-phone");
     return;
   }
 
   if (state.orderType === "delivery" && !address) {
-    alert("Ingresá la dirección.");
+    showOrderFeedback("Ingresá la dirección para el delivery.", "#customer-address");
     return;
   }
 
@@ -790,13 +825,13 @@ function sendOrderToWhatsApp() {
     method => method.id === state.paymentMethod
   );
   if (state.restaurant.paymentMethods?.length && !paymentMethod) {
-    alert("Elegí un medio de pago.");
+    showOrderFeedback("Elegí un medio de pago para continuar.", 'input[name="paymentMethod"]');
     return;
   }
 
   const recipient = getOrderWhatsAppNumber();
   if (!recipient) {
-    alert("El número de WhatsApp del local no es válido.");
+    showOrderFeedback("No pudimos preparar el contacto del local. Probá más tarde.");
     return;
   }
 

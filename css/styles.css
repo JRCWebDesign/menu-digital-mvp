@@ -468,6 +468,8 @@ main {
   margin: 7px 0 0;
   color: rgba(255, 255, 255, .76);
   font-size: 14px;
+  line-height: 1.4;
+  white-space: pre-line;
 }
 
 main {
@@ -1130,6 +1132,23 @@ input[type="checkbox"] {
   font-size: 13px;
 }
 
+.order-feedback {
+  margin: 14px 0 0;
+  padding: 12px 14px;
+  color: #7b211d;
+  background: #fff0ee;
+  border: 1px solid #edc5c1;
+  border-left: 4px solid var(--danger);
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+[aria-invalid="true"] {
+  outline: 2px solid var(--danger);
+  outline-offset: 2px;
+}
+
 @media (max-width: 760px) {
   .menu-list {
     grid-template-columns: 1fr;
@@ -1167,7 +1186,8 @@ input[type="checkbox"] {
   }
 
   .brand-copy p {
-    font-size: 12px;
+    font-size: 11px;
+    line-height: 1.4;
   }
 
   .status {
