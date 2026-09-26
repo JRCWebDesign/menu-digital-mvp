@@ -349,6 +349,11 @@ fieldset label {
   --muted: #666666;
   --accent: #f4b501;
   --accent-dark: #111111;
+  --brand-primary: #050505;
+  --brand-mark-color: #111111;
+  --brand-glow: rgba(244, 181, 1, .2);
+  --page-glow: rgba(244, 181, 1, .12);
+  --focus-ring: rgba(244, 181, 1, .48);
   --success: #2e7b4f;
   --danger: #b83a32;
   --shadow-soft: 0 16px 40px rgba(0, 0, 0, .08);
@@ -361,7 +366,7 @@ html {
 body {
   min-width: 320px;
   background:
-    radial-gradient(ellipse at 84% 0%, rgba(244, 181, 1, .12), transparent 30rem),
+    radial-gradient(ellipse at 84% 0%, var(--page-glow), transparent 30rem),
     #ffffff;
   color: #111111;
 }
@@ -379,7 +384,7 @@ button {
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid rgba(244, 181, 1, .48);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
@@ -387,12 +392,120 @@ textarea:focus-visible {
   min-height: 100vh;
 }
 
+.not-found-page {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 24px;
+  text-align: center;
+}
+
+.not-found-content {
+  width: min(100%, 420px);
+}
+
+.not-found-content h1 {
+  margin: 20px 0 8px;
+  color: #111111;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 28px;
+}
+
+.not-found-content p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.not-found-content a {
+  color: #111111;
+  font-weight: 700;
+  text-underline-offset: 3px;
+}
+
+#restaurant-selector:not(.hidden) {
+  padding-block: 24px 48px;
+}
+
+.restaurant-list {
+  display: grid;
+  width: min(100%, 760px);
+  gap: 12px;
+  margin: 0 auto;
+}
+
+.restaurant-link {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 98px;
+  padding: 14px 18px;
+  color: #111111;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  text-decoration: none;
+  transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.restaurant-link:hover {
+  border-color: var(--accent);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .08);
+  transform: translateY(-1px);
+}
+
+.restaurant-logo {
+  display: grid;
+  flex: 0 0 68px;
+  width: 68px;
+  height: 68px;
+  overflow: hidden;
+  place-items: center;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-size: 24px;
+  font-weight: 800;
+}
+
+.restaurant-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.restaurant-copy {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.restaurant-copy strong {
+  font-size: 16px;
+}
+
+.restaurant-copy > span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.restaurant-arrow {
+  margin-left: auto;
+  color: var(--brand-primary);
+  font-size: 28px;
+  line-height: 1;
+}
+
 header {
   overflow: hidden;
   color: #ffffff;
   background:
-    radial-gradient(circle at 88% 18%, rgba(244, 181, 1, .2), transparent 13rem),
-    linear-gradient(112deg, #050505 0%, #111111 62%, #202020 100%);
+    radial-gradient(circle at 88% 18%, var(--brand-glow), transparent 13rem),
+    linear-gradient(112deg, #050505 0%, var(--brand-primary));
   border: 0;
 }
 
@@ -417,7 +530,7 @@ main {
   width: 68px;
   height: 68px;
   place-items: center;
-  color: #111111;
+  color: var(--brand-mark-color);
   background: var(--accent);
   border: 4px solid rgba(255, 255, 255, .2);
   border-radius: 14px;
@@ -544,7 +657,7 @@ main {
   min-height: 218px;
   overflow: hidden;
   color: #ffffff;
-  background: #111111;
+  background: var(--brand-primary);
   border: 1px solid rgba(0, 0, 0, .18);
   border-radius: 19px;
   box-shadow: 0 12px 30px rgba(0, 0, 0, .12);
@@ -589,6 +702,9 @@ main {
 }
 
 .featured-price {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
   color: var(--accent);
   font-size: 19px;
   font-weight: 800;
@@ -606,7 +722,8 @@ main {
 }
 
 .featured-button:not(:disabled):hover {
-  background: #ffffff;
+  background: var(--brand-primary);
+  color: #ffffff;
   box-shadow: 0 5px 14px rgba(0, 0, 0, .17);
   transform: translateY(-1px);
 }
@@ -618,8 +735,8 @@ main {
   overflow: hidden;
   place-items: center;
   background:
-    radial-gradient(circle at 54% 45%, rgba(244, 181, 1, .36), transparent 44%),
-    linear-gradient(135deg, #f4b501, #111111);
+    radial-gradient(circle at 54% 45%, var(--brand-glow), transparent 44%),
+    linear-gradient(135deg, var(--accent), var(--brand-primary));
 }
 
 .featured-visual::before,
@@ -707,7 +824,7 @@ main {
 
 .review-link:hover {
   color: #ffffff;
-  background: #111111;
+  background: var(--brand-primary);
 }
 
 #social-links:not(.hidden) {
@@ -734,7 +851,7 @@ main {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  color: #111111;
+  color: var(--brand-primary);
   font-size: 12px;
   font-weight: 750;
   text-decoration-color: transparent;
@@ -923,8 +1040,26 @@ main {
 }
 
 .product-price {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 7px;
   color: #111111;
   font-size: 16px;
+  font-weight: 800;
+}
+
+.original-price {
+  color: var(--muted);
+  font-size: .78em;
+  font-weight: 500;
+}
+
+.modal-product-price {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  color: #111111;
+  font-size: 18px;
   font-weight: 800;
 }
 
@@ -969,7 +1104,7 @@ main {
 .cart-bar button {
   min-height: 60px;
   padding: 12px 18px;
-  background: #111111;
+  background: var(--brand-primary);
   border: 1px solid rgba(255, 255, 255, .1);
   border-radius: 17px;
   box-shadow: 0 14px 35px rgba(35, 25, 20, .28);
@@ -1188,6 +1323,30 @@ input[type="checkbox"] {
   .brand-copy p {
     font-size: 11px;
     line-height: 1.4;
+  }
+
+  #restaurant-selector:not(.hidden) {
+    padding-block: 18px 32px;
+  }
+
+  .restaurant-link {
+    gap: 12px;
+    min-height: 82px;
+    padding: 12px;
+  }
+
+  .restaurant-logo {
+    flex-basis: 56px;
+    width: 56px;
+    height: 56px;
+  }
+
+  .restaurant-copy strong {
+    font-size: 14px;
+  }
+
+  .restaurant-copy > span {
+    font-size: 11px;
   }
 
   .status {

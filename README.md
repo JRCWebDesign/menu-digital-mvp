@@ -4,7 +4,7 @@ Base funcional en HTML + CSS + JavaScript vanilla.
 
 ## Qué incluye
 
-- Multi-local mediante slug: `/lKb-smash`
+- Selector de locales en `/` y menús por slug, por ejemplo `/lKb-smash/` o `/burger-house/`
 - Configuración por local
 - Menú y categorías
 - Estado abierto/cerrado según horario
@@ -23,11 +23,14 @@ Base funcional en HTML + CSS + JavaScript vanilla.
 
 Como usa ES Modules, lo ideal es servirlo con un servidor local.
 
-Por ejemplo con VS Code + Live Server o:
+Para que las rutas por slug funcionen localmente, ejecutá el servidor con fallback SPA:
 
 ```bash
-npx serve .
+npx --yes serve -s . -l 5500
 ```
+
+Después abrí `http://localhost:5500/` o `http://localhost:5500/burger-house/`.
+El modo `-s` sirve `index.html` para las rutas de locales. En Cloudflare Pages, la regla `_redirects` hace ese trabajo.
 
 ## Próximo paso recomendado
 

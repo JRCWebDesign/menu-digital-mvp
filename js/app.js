@@ -14,17 +14,101 @@ const state = {
 const $ = (selector) => document.querySelector(selector);
 
 function getRestaurantSlug() {
-  // Demo:
-  // /lKb-smash
-  // Si no hay slug, usamos el local de ejemplo.
   const parts = window.location.pathname.split("/").filter(Boolean);
-  return parts[0] || "lKb-smash";
+  if (!parts.length) return null;
+  if (parts.length !== 1) return null;
+
+  try {
+    return decodeURIComponent(parts[0]);
+  } catch {
+    return null;
+  }
+}
+
+function renderRestaurantSelector() {
+  document.title = "Elegí un local";
+  [
+    "#restaurant-status",
+    "#featured-product",
+    "#categories",
+    "#menu",
+    "#google-reviews",
+    "#social-links"
+  ].forEach(selector => $(selector).classList.add("hidden"));
+
+  $("#restaurant-header").innerHTML = `
+    <div class="header-inner">
+      <div class="brand-copy">
+        <span class="brand-eyebrow">MENÚS DISPONIBLES</span>
+        <h1>Elegí un local</h1>
+        <p>Seleccioná un local para ver su menú.</p>
+      </div>
+    </div>
+  `;
+
+  $("#restaurant-selector").classList.remove("hidden");
+  $("#restaurant-selector").innerHTML = `
+    <div class="restaurant-list">
+      ${Object.entries(restaurants).map(([slug, restaurant]) => `
+        <a class="restaurant-link" href="/${encodeURIComponent(slug)}/">
+          <span class="restaurant-logo">
+            ${restaurant.logo
+              ? `<img src="${restaurant.logo}" alt="">`
+              : `<span aria-hidden="true">${restaurant.name.charAt(0)}</span>`}
+          </span>
+          <span class="restaurant-copy">
+            <strong>${restaurant.name}</strong>
+            <span>${restaurant.tagline?.split("\n")[0] || "Ver menú y hacer un pedido"}</span>
+          </span>
+          <span class="restaurant-arrow" aria-hidden="true">›</span>
+        </a>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderNotFound() {
+  document.title = "Menú no encontrado";
+  $("#app").innerHTML = `
+    <main class="not-found-page">
+      <div class="not-found-content">
+        <h1>Este menú no está disponible</h1>
+        <p>Revisá el enlace o volvé a la <a href="/">lista de locales</a>.</p>
+      </div>
+    </main>
+  `;
+}
+
+function applyRestaurantTheme(restaurant) {
+  const theme = restaurant.theme || {};
+  const root = document.documentElement;
+
+  root.style.setProperty("--brand-primary", theme.primary || "#050505");
+  root.style.setProperty("--brand-mark-color", theme.markColor || "#111111");
+  root.style.setProperty("--accent", theme.accent || "#f4b501");
+  root.style.setProperty("--accent-dark", theme.primary || "#111111");
+  root.style.setProperty("--brand-glow", theme.glow || "rgba(244, 181, 1, .2)");
+  root.style.setProperty("--page-glow", theme.pageGlow || "rgba(244, 181, 1, .12)");
+  root.style.setProperty("--surface-soft", theme.surfaceSoft || "#fff8dd");
+  root.style.setProperty("--focus-ring", theme.focusRing || "rgba(244, 181, 1, .48)");
 }
 
 function init() {
   const slug = getRestaurantSlug();
-  state.restaurant = restaurants[slug] || restaurants["lKb-smash"];
 
+  if (!slug) {
+    renderRestaurantSelector();
+    return;
+  }
+
+  state.restaurant = slug ? restaurants[slug] : null;
+
+  if (!state.restaurant) {
+    renderNotFound();
+    return;
+  }
+
+  applyRestaurantTheme(state.restaurant);
   renderHeader();
   renderStatus();
   renderFeaturedProduct();
@@ -42,6 +126,14 @@ function money(value) {
     currency: "UYU",
     maximumFractionDigits: 0
   }).format(value).replace("UYU", "$");
+}
+
+function productPriceMarkup(product, className) {
+  const originalPrice = product.originalPrice > product.price
+    ? `<del class="original-price">${money(product.originalPrice)}</del>`
+    : "";
+
+  return `<span class="${className}">${money(product.price)}${originalPrice}</span>`;
 }
 
 function parseMinutes(time) {
@@ -197,7 +289,7 @@ function renderFeaturedProduct() {
         <h2>${product.name}</h2>
         <p>${feature.message || product.description}</p>
         <div class="featured-actions">
-          <strong class="featured-price">${money(product.price)}</strong>
+          ${productPriceMarkup(product, "featured-price")}
           <button class="featured-button" data-featured-product ${canOrder ? "" : "disabled"}>
             ${canOrder ? "Lo quiero" : "Pedidos cerrados"}
           </button>
@@ -361,7 +453,7 @@ function renderSocialLinks() {
 
 function productCard(product) {
   const tags = product.tags?.length
-    ? `<div class="tags">${product.tags.map(tag => `<span>${tag === "popular" ? "MÁS PEDIDO" : tag === "signature" ? "DE LA CASA" : tag === "combo" ? "COMBO" : tag === "kids" ? "IDEAL PARA CHICOS" : tag === "extra" ? "EXTRA" : tag}</span>`).join("")}</div>`
+    ? `<div class="tags">${product.tags.map(tag => `<span>${tag === "popular" ? "MÁS PEDIDO" : tag === "signature" ? "DE LA CASA" : tag === "combo" ? "COMBO" : tag === "kids" ? "IDEAL PARA CHICOS" : tag === "extra" ? "EXTRA" : tag === "promotion" ? "PROMO" : tag}</span>`).join("")}</div>`
     : "";
   const visuals = {
     fries: "🍟",
@@ -382,9 +474,9 @@ function productCard(product) {
       <div class="product-info">
         ${tags}
         <h2>${product.name}</h2>
-        <p>${product.description}</p>
+        ${product.description ? `<p>${product.description}</p>` : ""}
         ${burgerComboDetails}
-        <strong class="product-price">${money(product.price)}</strong>
+        ${productPriceMarkup(product, "product-price")}
       </div>
 
       <button
@@ -418,11 +510,11 @@ function openProduct(product) {
     <div class="modal-content">
       <button class="modal-close" data-close-modal aria-label="Cerrar">×</button>
       <h2>${product.name}</h2>
-      <p>${product.description}</p>
+      ${product.description ? `<p>${product.description}</p>` : ""}
       ${hasIncludedFries(product) && burgerComboIncludesText()
         ? `<p class="product-includes">${burgerComboIncludesText()}</p>`
         : ""}
-      <strong>${money(product.price)}</strong>
+      ${productPriceMarkup(product, "modal-product-price")}
 
       ${
         hasOptions
