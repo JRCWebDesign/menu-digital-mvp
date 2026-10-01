@@ -1384,3 +1384,28 @@ input[type="checkbox"] {
     animation-iteration-count: 1 !important;
   }
 }
+
+/* Cantidades visibles en el menú y en la personalización. */
+.product-actions { align-self: end; display: grid; justify-items: center; gap: 6px; }
+.in-cart-label { color: var(--muted); font-size: 11px; }
+.menu-quantity { gap: 3px; }
+.menu-quantity span { min-width: 24px; text-align: center; font-weight: 750; }
+.menu-quantity button, .product-quantity-row button {
+  width: 44px; height: 44px; background: var(--accent); border: 0;
+}
+.customize-button {
+  padding: 5px 0; border: 0; background: transparent; color: #111;
+  font-size: 11px; text-decoration: underline; text-underline-offset: 3px;
+}
+.product-quantity-row {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 16px; margin-top: 22px;
+}
+.product-quantity-row .quantity span { min-width: 28px; text-align: center; }
+@media (max-width: 1050px) {
+  .product-card { grid-template-columns: 78px minmax(0, 1fr); }
+  .product-visual { grid-row: 1 / 3; width: 78px; }
+  .product-actions, .product-card > .add-button { grid-column: 2; justify-self: end; }
+  .product-card > .add-button { width: auto; height: 44px; padding: 9px 13px; }
+  .product-card > .add-button span:last-child { display: inline; }
+}

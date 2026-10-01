@@ -7,6 +7,7 @@ const state = {
   productBeingConfigured: null,
   productOptions: [],
   selectedOptions: [],
+  productQuantity: 1,
   orderType: null,
   paymentMethod: null
 };
@@ -129,7 +130,7 @@ function findNextOpening(fromDate) {
 }
 
 function renderHeader() {
-  document.title = `${state.restaurant.name} · Menú digital`;
+  document.title = `${state.restaurant.name} · Hacé tu pedido`;
   const brandMark = state.restaurant.logo
     ? `<img class="brand-logo" src="${state.restaurant.logo}" alt="Logo de ${state.restaurant.name}">`
     : `<div class="brand-mark" aria-hidden="true">${state.restaurant.name.charAt(0)}</div>`;
@@ -276,6 +277,13 @@ function renderMenu() {
     </div>
   `;
 
+  $("#menu").querySelectorAll("[data-menu-increase]").forEach(button => {
+    button.addEventListener("click", () => changeProductQuantity(button.dataset.menuIncrease, 1));
+  });
+  $("#menu").querySelectorAll("[data-menu-decrease]").forEach(button => {
+    button.addEventListener("click", () => changeProductQuantity(button.dataset.menuDecrease, -1));
+  });
+
   $("#menu").querySelectorAll("[data-product-id]").forEach(button => {
     button.addEventListener("click", () => {
       const product = state.restaurant.products.find(
@@ -287,6 +295,42 @@ function renderMenu() {
       openProduct(product);
     });
   });
+}
+
+function productQuantityInCart(productId) {
+  return state.cart.filter(item => item.productId === productId)
+    .reduce((total, item) => total + item.quantity, 0);
+}
+
+function changeProductQuantity(productId, amount) {
+  if (amount > 0 && !canPlaceOrders()) return;
+  const lines = state.cart.filter(item => item.productId === productId);
+  // Elegir la variante evita modificar extras distintos por accidente.
+  if (lines.length > 1) {
+    openCart();
+    return;
+  }
+  if (lines.length === 1) changeQuantity(lines[0].lineId, amount);
+}
+
+function productActions(product) {
+  const quantity = productQuantityInCart(product.id);
+  const disabled = canPlaceOrders() ? "" : "disabled";
+  return quantity ? `
+    <div class="product-actions">
+      <span class="in-cart-label">En tu pedido</span>
+      <div class="quantity menu-quantity" role="group" aria-label="Cantidad de ${product.name}">
+        <button data-menu-decrease="${product.id}" aria-label="Quitar una unidad de ${product.name}">−</button>
+        <span aria-live="polite">${quantity}</span>
+        <button data-menu-increase="${product.id}" aria-label="Sumar una unidad de ${product.name}" ${disabled}>+</button>
+      </div>
+      <button class="customize-button" data-product-id="${product.id}" ${disabled}>Agregar otra opción</button>
+    </div>
+  ` : `
+    <button class="add-button" data-product-id="${product.id}" ${disabled} aria-label="Agregar ${product.name}">
+      <span aria-hidden="true">+</span><span>Agregar</span>
+    </button>
+  `;
 }
 
 function safeExternalUrl(value) {
@@ -387,12 +431,7 @@ function productCard(product) {
         <strong class="product-price">${money(product.price)}</strong>
       </div>
 
-      <button
-        class="add-button"
-        data-product-id="${product.id}"
-        ${!canPlaceOrders() ? "disabled" : ""}>
-        <span aria-hidden="true">+</span><span>Agregar</span>
-      </button>
+      ${productActions(product)}
     </article>
   `;
 }
@@ -408,6 +447,7 @@ function getProductOptions(product) {
 
 function openProduct(product) {
   state.productBeingConfigured = product;
+  state.productQuantity = 1;
   state.productOptions = getProductOptions(product);
   state.selectedOptions = [];
 
@@ -446,9 +486,15 @@ function openProduct(product) {
           : ""
       }
 
-      <button class="primary-button" id="confirm-product">
-        Agregar al pedido
-      </button>
+      <div class="product-quantity-row">
+        <strong>Cantidad</strong>
+        <div class="quantity" role="group" aria-label="Cantidad a agregar">
+          <button id="product-decrease" aria-label="Reducir cantidad" disabled>−</button>
+          <span id="product-quantity" aria-live="polite">1</span>
+          <button id="product-increase" aria-label="Aumentar cantidad">+</button>
+        </div>
+      </div>
+      <button class="primary-button" id="confirm-product"></button>
     </div>
   `;
 
@@ -459,6 +505,15 @@ function openProduct(product) {
     input.addEventListener("change", updateSelectedOptions);
   });
 
+  $("#product-decrease").addEventListener("click", () => {
+    state.productQuantity = Math.max(1, state.productQuantity - 1);
+    updateProductSummary();
+  });
+  $("#product-increase").addEventListener("click", () => {
+    state.productQuantity += 1;
+    updateProductSummary();
+  });
+  updateProductSummary();
   $("#confirm-product").addEventListener("click", confirmProduct);
 
   $("#product-modal").querySelectorAll("[data-close-modal]").forEach(element => {
@@ -478,9 +533,23 @@ function updateSelectedOptions() {
       choice => choice.id === input.dataset.choiceId
     );
   });
+  updateProductSummary();
+}
+
+function updateProductSummary() {
+  const extras = state.selectedOptions.reduce((sum, option) => sum + (option.price || 0), 0);
+  $("#product-quantity").textContent = state.productQuantity;
+  $("#product-decrease").disabled = state.productQuantity <= 1;
+  $("#confirm-product").textContent = `Agregar ${state.productQuantity} al pedido · ${money((state.productBeingConfigured.price + extras) * state.productQuantity)}`;
+}
+
+function optionKey(options) {
+  return JSON.stringify(options.map(option => [option.id, option.name, option.price || 0])
+    .sort((a, b) => JSON.stringify(a).localeCompare(JSON.stringify(b))));
 }
 
 function confirmProduct() {
+  if (!canPlaceOrders()) return;
   const product = state.productBeingConfigured;
 
   const extraPrice = state.selectedOptions.reduce(
@@ -488,11 +557,15 @@ function confirmProduct() {
     0
   );
 
-  state.cart.push({
+  const existing = state.cart.find(item => item.productId === product.id
+    && optionKey(item.options) === optionKey(state.selectedOptions));
+  if (existing) {
+    existing.quantity += state.productQuantity;
+  } else state.cart.push({
     lineId: crypto.randomUUID(),
     productId: product.id,
     name: product.name,
-    quantity: 1,
+    quantity: state.productQuantity,
     basePrice: product.price,
     unitPrice: product.price + extraPrice,
     options: [...state.selectedOptions]
@@ -500,6 +573,7 @@ function confirmProduct() {
 
   closeProductModal();
   renderCartBar();
+  renderMenu();
 }
 
 function closeProductModal() {
@@ -755,6 +829,7 @@ function clearOrderFeedback() {
 }
 
 function changeQuantity(lineId, amount) {
+  if (amount > 0 && !canPlaceOrders()) return;
   const item = state.cart.find(item => item.lineId === lineId);
   if (!item) return;
 
@@ -765,8 +840,9 @@ function changeQuantity(lineId, amount) {
   }
 
   renderCartBar();
+  renderMenu();
 
-  if (state.cart.length) {
+  if (state.cart.length && !$("#cart-drawer").classList.contains("hidden")) {
     renderCartDrawer();
   } else {
     closeCart();
@@ -776,8 +852,9 @@ function changeQuantity(lineId, amount) {
 function removeItem(lineId) {
   state.cart = state.cart.filter(item => item.lineId !== lineId);
   renderCartBar();
+  renderMenu();
 
-  if (state.cart.length) {
+  if (state.cart.length && !$("#cart-drawer").classList.contains("hidden")) {
     renderCartDrawer();
   } else {
     closeCart();
