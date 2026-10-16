@@ -1,4 +1,4 @@
-import { restaurants } from "./data.js";
+import { loadData, publicData, STORAGE_KEY } from "./demo-store.js";
 
 const state = {
   restaurant: null,
@@ -14,18 +14,10 @@ const state = {
 
 const $ = (selector) => document.querySelector(selector);
 
-function getRestaurantSlug() {
-  // Demo:
-  // /lKb-smash
-  // Si no hay slug, usamos el local de ejemplo.
-  const parts = window.location.pathname.split("/").filter(Boolean);
-  return parts[0] || "lKb-smash";
-}
-
 function init() {
-  const slug = getRestaurantSlug();
-  state.restaurant = restaurants[slug] || restaurants["lKb-smash"];
+  state.restaurant = publicData(loadData());
 
+  renderPromotion();
   renderHeader();
   renderStatus();
   renderFeaturedProduct();
@@ -198,7 +190,7 @@ function renderFeaturedProduct() {
         <h2>${product.name}</h2>
         <p>${feature.message || product.description}</p>
         <div class="featured-actions">
-          <strong class="featured-price">${money(product.price)}</strong>
+          <strong class="featured-price">${product.offerEnabled ? `<del class="old-price">${money(product.regularPrice)}</del> ` : ""}${money(product.price)}</strong>
           <button class="featured-button" data-featured-product ${canOrder ? "" : "disabled"}>
             ${canOrder ? "Lo quiero" : "Pedidos cerrados"}
           </button>
@@ -428,7 +420,7 @@ function productCard(product) {
         <h2>${product.name}</h2>
         <p>${product.description}</p>
         ${burgerComboDetails}
-        <strong class="product-price">${money(product.price)}</strong>
+        <strong class="product-price">${product.offerEnabled ? `<del class="old-price">${money(product.regularPrice)}</del> ` : ""}${money(product.price)}</strong>
       </div>
 
       ${productActions(product)}
@@ -462,7 +454,7 @@ function openProduct(product) {
       ${hasIncludedFries(product) && burgerComboIncludesText()
         ? `<p class="product-includes">${burgerComboIncludesText()}</p>`
         : ""}
-      <strong>${money(product.price)}</strong>
+      <strong>${product.offerEnabled ? `<del class="old-price">${money(product.regularPrice)}</del> ` : ""}${money(product.price)}</strong>
 
       ${
         hasOptions
@@ -565,6 +557,7 @@ function confirmProduct() {
     lineId: crypto.randomUUID(),
     productId: product.id,
     name: product.name,
+    orderName: product.name.replace(/&amp;|&lt;|&gt;|&quot;|&#39;/g, entity => ({"&amp;":"&","&lt;":"<","&gt;":">","&quot;":String.fromCharCode(34),"&#39;":String.fromCharCode(39)}[entity])),
     quantity: state.productQuantity,
     basePrice: product.price,
     unitPrice: product.price + extraPrice,
@@ -622,6 +615,7 @@ function openCart() {
 }
 
 function renderCartDrawer() {
+  const previousFields = Object.fromEntries(['customer-name','customer-phone','customer-address','customer-notes'].map(id => [id, document.getElementById(id)?.value || '']));
   $("#cart-drawer").innerHTML = `
     <div class="drawer-backdrop" data-close-cart></div>
     <aside class="drawer-content">
@@ -703,7 +697,7 @@ function renderCartDrawer() {
         class="primary-button"
         id="send-whatsapp"
         ${canPlaceOrders() ? "" : "disabled"}>
-        Enviar pedido por WhatsApp
+        Ver pedido de prueba
       </button>
     </aside>
   `;
@@ -740,6 +734,10 @@ function renderCartDrawer() {
   });
 
   $("#send-whatsapp").addEventListener("click", sendOrderToWhatsApp);
+  renderOrderExtraFields();
+  const orderChoice = [...document.querySelectorAll('input[name="orderType"]')].find(input => input.value === state.orderType);
+  if (orderChoice) orderChoice.checked = true;
+  for (const [id, value] of Object.entries(previousFields)) { const field = document.getElementById(id); if (field) field.value = value; }
 }
 
 function renderOrderExtraFields() {
@@ -914,7 +912,7 @@ function sendOrderToWhatsApp() {
 
   const productLines = state.cart.flatMap(item => {
     const lines = [
-      `- ${item.quantity} x ${item.name} - ${money(item.unitPrice * item.quantity)}`
+      `- ${item.quantity} x ${item.orderName || item.name} - ${money(item.unitPrice * item.quantity)}`
     ];
 
     if (item.options.length) {
@@ -942,10 +940,11 @@ function sendOrderToWhatsApp() {
     notes ? `Observaciones: ${notes}` : ""
   ].filter(Boolean);
 
-  const message = encodeURIComponent(lines.join("\n"));
-  const url = `https://wa.me/${recipient}?text=${message}`;
 
-  window.open(url, "_blank", "noopener,noreferrer");
+  showOrderFeedback("Demo: el pedido está preparado. No se envió ningún mensaje.");
+  let preview = document.querySelector("#demo-order-preview");
+  if (!preview) { preview = document.createElement("pre"); preview.id = "demo-order-preview"; preview.style.cssText = "white-space:pre-wrap;font-size:13px;background:#f4f6f2;padding:16px;border-radius:10px"; document.querySelector("#order-feedback").after(preview); }
+  preview.textContent = lines.join("\n");
 }
 
 function bindGlobalEvents() {
@@ -953,4 +952,18 @@ function bindGlobalEvents() {
   // reviews, Instagram, promociones, programación de pedidos, etc.
 }
 
-init();
+function renderPromotion() {
+  const promotion = state.restaurant.promotion;
+  const section = document.querySelector('#demo-promotion');
+  const product = state.restaurant.products.find(item => item.id === promotion.productId);
+  section.hidden = !promotion.active || !product;
+  section.replaceChildren();
+  if (section.hidden) return;
+  const heading = document.createElement('h2'); heading.textContent = promotion.title;
+  const description = document.createElement('p'); description.textContent = promotion.text;
+  const button = document.createElement('button'); button.className = 'primary-button'; button.textContent = 'Ver promoción';
+  button.onclick = () => openProduct(product);
+  section.append(heading, description, button);
+}
+window.addEventListener('storage', event => { if (event.key === STORAGE_KEY) location.reload(); });
+try { init(); } catch (error) { document.querySelector('#restaurant-status').textContent = error.message; }
